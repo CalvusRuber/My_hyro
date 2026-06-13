@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <title>Neon Gyro Escape v12.8</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #2471a3;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+         //СТИЛИ ДЛЯ ВИРТУАЛЬНОГО ДЖОЙСТИКА 
+        #joy-zone {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
+            z-index: 99; /* Поверх канваса, но под оверлеями */
+            touch-action: none; /* Блокируем стандартные жесты браузера */
+        }
+
+        #joy-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(25, 27, 44, 0.4);
+            border: 3px solid #00ffcc; /* Бирюзовый неон */
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #joy-stick {
+            width: 50px;
+            height: 50px;
+            background: #ff00aa; /* Наш фирменный розовый ff00aa */
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 0, 170, 0.6);
+            position: absolute;
+            transition: transform 0.05s linear; /* Плавный возврат в центр */
+            pointer-events: none; /* Чтобы тачи обрабатывала подложка */
+        }
+        
+        #game-layout {
+            display: grid;
+            grid-template-columns: 190px 1fr;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #landscape-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0d0e15; color: #70ab52;
+            z-index: 9999; text-align: center; justify-content: center; align-items: center;
+            font-size: 24px; font-weight: bold; padding: 20px; box-sizing: border-box;
+        }
+
+        @media (orientation: portrait) {
+            #landscape-warning { display: flex; }
+        }
+
+        /* БІЧНЕ МЕНЮ */
+        #side-menu {
+            background: #22445c;
+            border-right: 3px solid #70ab52;
+            box-sizing: border-box;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: stretch;
+            box-shadow: 5px 0 20px rgba(0,0,0,0.5);
+            height: 100%;
+            z-index: 100;
+        }
+
+        .menu-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .game-title {
+            color: #ff00aa;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255,0,170,0.5);
+            letter-spacing: 0.5px;
+            line-height: 1.1;
+        }
+
+        .game-version {
+            font-size: 9px;
+            color: #ff00aa;
+            text-align: center;
+            margin-top: 1px;
+            margin-bottom: 4px;
+        }
+
+        .hud-label {
+            color: #ff00aa;
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+        }
+
+        .hud-value {
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255,255,255,0.3);
+            line-height: 1.1;
+        }
+
+        button, select {
+            background: rgba(25, 27, 44, 0.8);
+            border: 2px solid #70ab52;
+            color: #4c7a34;
+            padding: 6px 8px;
+            font-size: 12px;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255,0,170,0.2);
+            outline: none;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        button:active, select:active {
+            background: #1e3314;
+            color: #000;
+        }
+
+        #pause-btn { border-color: #00bfff; color: #00bfff; }
+        #help-btn { border-color: #ffea00; color: #ffea00; }
+        #fullscreen-btn { border-color: #00ffcc; color: #00ffcc; font-size: 11px; padding: 4px; }
+        #mode-select { border-color: #ffea00; color: #ffea00; }
+        #level-select { border-color: #00ffcc; color: #00ffcc; }
+
+        /* ІГРОВИЙ КОНТЕЙНЕР ТА ОВЕРЛЕЇ */
+        #canvas-container {
+            height: 100%;
+            position: relative;
+            background: #1a2230;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #start-overlay, #level-overlay, #help-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        #start-overlay {
+            background: rgba(13, 14, 21, 0.8);
+            z-index: 500;
+        }
+
+        #level-overlay {
+            background: rgba(13, 14, 21, 0.8);
+            display: none;
+            z-index: 400;
+        }
+
+        #help-overlay {
+            display: none;
+            background: rgba(7, 8, 13, 0.96);
+            z-index: 600;
+            padding: 15px;
+        }
+
+        .help-content {
+            background: #11121c;
+            border: 3px solid #ff00aa;
+            box-shadow: 0 0 25px rgba(255,0,170,0.4);
+            border-radius: 10px;
+            width: 95%;
+            max-width: 650px;
+            max-height: 92vh;
+            padding: 15px;
+            color: #fff;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .help-header {
+            color: #00ffcc;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 12px;
+            text-shadow: 0 0 8px rgba(0,255,204,0.4);
+        }
+
+        .help-section {
+            margin-bottom: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .help-section h4 {
+            color: #ffea00;
+            margin: 4px 0 2px 0;
+            text-transform: uppercase;
+            font-size: 12px;
+            border-bottom: 1px dashed #33364f;
+            padding-bottom: 2px;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .help-item {
+            background: rgba(25, 27, 44, 0.5);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border-left: 3px solid #fff;
+        }
+
+        #permission-btn, #level-start-btn {
+            padding: 15px 35px;
+            font-size: 18px;
+            width: auto;
+            border-radius: 8px;
+        }
+
+        #win-screen {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 300;
+        }
+
+        #pause-text {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 35px;
+            font-weight: bold;
+            color: #00bfff;
+            text-shadow: 0 0 15px #00bfff;
+            z-index: 250;
+            pointer-events: none;
+        }
+
+        .flash-text {
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px #fff, 0 0 20px #ff00ea;
+            animation: blink 0.4s infinite alternate;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="landscape-warning">"Гойдатиме вітер<br> ноги твої<br> москаль якщо ти..."
+    <br> (хоку)<br><br>Поверніть пристрій в альбомний режим (Landscape) 🔄</div>
+    
+    <div id="game-layout">
+        
+        <div id="side-menu">
+            <div class="menu-section">
+                <div>
+                    <div class="game-title">КУЛЬКА-ВТІКАЧ</div>
+                    <div class="game-version">v13.1.0</div>
+                </div>
+                
+                <div>
+                    <div class="hud-label">Режим гри:</div>
+                    <select id="mode-select">
+                        <option value="normal">🟢 Звичайний</option>
+                        <option value="survival">💀 Виживатор</option>
+                    </select>
+                </div>
+
+                <div>
+                    <div class="hud-label">Рівень:</div>
+                    <select id="level-select"></select>
+                </div>
+
+                <div>
+                    <div class="hud-label">Життє:</div>
+                    <div class="hud-value" id="hud-lives">❤️❤️❤️</div>
+                </div>
+                
+                <div>
+                    <div class="hud-label" id="timer-label" style="display: none;">Таймер:</div>
+                    <div class="hud-value" id="hud-timer" style="display: none; color: #ff0055;">30s</div>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <button id="fullscreen-btn">📺 НА ВЕСЬ ЕКРАН</button>
+                <button id="help-btn">❓ Нагадайка</button>
+                <button id="pause-btn">⏸️ Пауза для баночки</button>
+                <button id="mute-btn">🎵 Звучок: Вкл</button>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+<canvas id="gameCanvas"></canvas>
+
+            <div id="joy-zone">
+                <div id="joy-base">
+                    <div id="joy-stick"></div>
+                </div>
+            </div>
+            <div id="start-overlay">
+                <button id="permission-btn">ЗРОБИ БАНОЧКУ І НАТИСНИ ТУТ</button>
+            </div>
+
+            <div id="level-overlay">
+                <button id="level-start-btn">РІВЕНЬ 1</button>
+            </div>
+
+            <div id="help-overlay">
+                <div class="help-content">
+                    <div class="help-header">ІНСТРУКЦІЯ "ЯК ТУТ І ШО"</div>
+                    
+                    <div class="help-section">
+                        <h4>🎮 Керування пристроєм:</h4>
+                        • **На смартфонах: Нахиляєш- котишся! (працює гіроскоп). Увага: Chrome вимагає лише **HTTPS** з'єднання!<br>
+                        • **На компі: Керуй *Стрілочками* на клавіатурі.
+                    </div>
+
+                    <div class="help-section">
+                        <h4>🎯 Трохи про об'єкти на полі:</h4>
+                        <div class="help-grid">
+                            <div class="help-item" style="border-color: #00ff66;">
+                                <strong style="color: #00ff66;">🟢 Зелене коло, 🔵 Синій квадрат, 🟡 Жовтий трикутник, 🔮 Рожева зірка</strong><br>
+                                — **Основні цільові чекпоінти.** Вони постійно рухаються. Твоя задача зібрати їх усі, щоб завершити поточний рівень.
+                            </div>
+                            <div class="help-item" style="border-color: #ff0055;">
+                                <strong style="color: #ff0055;">❤️ Рожеве серце (Мерехтливе, пульсуюче)</strong><br>
+                                — **Лікувальний чекпоінт.** З'являється починаючи з 6-го рівня. Відновлює +1 життє (максимум до 4 одиниць у Звичайному режимі, та до 7 в режимі Виживатор). Взяття не є обов'язковим для закінчення рівня.
+                            </div>
+                            <div class="help-item" style="border-color: #ff003c;">
+                                <strong style="color: #ff003c;">❌ Червоний хрест</strong><br>
+                                — **Кілер-чекпоінт.** Основний ворог. Буває двох типів: <br> 1) Полює безпосередньо на тебе. <br> 2) Хаотично літає по карті (На вищіх рівнях кількість зростає до двох). <br> Зіткнення з ними відбирає 1 життє та скидає кульку в центр поля.
+                            </div>
+                            <div class="help-item" style="border-color: #2d114d;">
+                                <strong style="color: #a020f0;">🕳️ Чорні лузи</strong><br>
+                                — **Статичні пастки.** Нерухомо розташовані на полі. Падіння всередину лузи- зняття 1 життя та скид кульки в центр поля.<vr> Особливо підла відмінність це рандомне розташування в кожному (навіть в одному й тому ж) відкритому рівні. Кількість Чорних луз зростає з кожним рівнем.
+                            </div>
+                            <div class="help-item" style="border-color: #6e00ff;">
+                                <strong style="color: #6e00ff;">🔘 Фіолетові енергетичні сфери</strong><br>
+                                — **Статичні перешкоди.** З'являються на фінальних рівнях (13–15). Вони не вбивають, але мають потужне силове поле, яке не понятно як впливає на кульку, але зовсім не впливає на всі чекпойнти та не перешкоджає їх руху. 
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="close-help-btn" style="margin-top: 10px; border-color: #00ffcc; color: #00ffcc;">ЗРОЗУМІЛО (Назад до гри)</button>
+                </div>
+            </div>
+
+            <div id="pause-text">GAME PAUSED</div>
+
+            <div id="win-screen">
+                <div class="flash-text">НУ НІХЄРА СОБІ!,<br>БРО, ТИ КРАСАВЧІК!!</div>
+                <button onclick="restartGame()" style="margin-top:20px; width: auto; padding: 10px 30px;">Зробити баночку і пограти ще:)</button>
+            </div>
+
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const hudLives = document.getElementById('hud-lives');
+        const levelSelect = document.getElementById('level-select');
+        const modeSelect = document.getElementById('mode-select');
+        const muteBtn = document.getElementById('mute-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const helpBtn = document.getElementById('help-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const winScreen = document.getElementById('win-screen');
+        const startOverlay = document.getElementById('start-overlay');
+        const levelOverlay = document.getElementById('level-overlay');
+        const helpOverlay = document.getElementById('help-overlay');
+        const closeHelpBtn = document.getElementById('close-help-btn');
+        const pauseText = document.getElementById('pause-text');
+        const permissionBtn = document.getElementById('permission-btn');
+        const levelStartBtn = document.getElementById('level-start-btn');
+        
+        let survivalTime = 30;
+        const timerDisplay = document.getElementById('hud-timer');
+        const timerLabel = document.getElementById('timer-label');
+
+        let currentLevel = 1;
+        const maxLevels = 15;
+        let lives = 3;
+        let isMuted = false;
+        let gameActive = false;
+        let levelWaiting = false; 
+        let isPaused = false;     
+        let gameMode = 'normal'; 
+
+        let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 14, color: '#ffffff' };
+        let holes = [];
+        let checkpoints = [];
+        let badCheckpoints = []; 
+        let obstacles = []; 
+        let healCheckpoints = []; 
+
+        let tiltX = 0;
+        let tiltY = 0;
+        let pulseTime = 0; 
+
+        function populateLevelSelect() {
+            levelSelect.innerHTML = '';
+            for(let i=1; i<=maxLevels; i++) {
+                let opt = document.createElement('option');
+                opt.value = i; opt.innerText = `Рівень ${i}`;
+                levelSelect.appendChild(opt);
+            }
+        }
+
+        function resize() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return false;
+            let w = container.clientWidth;
+            let h = container.clientHeight;
+            if (w === 0 || h === 0) return false;
+            canvas.width = w;
+            canvas.height = h;
+            return true;
+        }
+
+        let audioCtx = null;
+        let synthInterval = null;
+        const melody = [
+    // --- КУПЛЕТ (64 ноты: Мягкий бас, частота 130-200Гц, 'triangle') ---
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.4}, {f: 164.81, d: 0.4}, {f: 196.00, d: 0.6},
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.3}, {f: 164.81, d: 0.4}, {f: 196.00, d: 0.6},
+    {f: 164.81, d: 0.6}, {f: 196.00, d: 0.4}, {f: 220.00, d: 0.2}, {f: 220.00, d: 0.2}, {f: 261.63, d: 0.6},
+    {f: 130.81, d: 0.2}, {f: 130.81, d: 0.2}, {f: 261.63, d: 0.4}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.6},
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.4}, {f: 164.81, d: 0.4}, {f: 196.00, d: 0.6},
+    {f: 130.81, d: 0.2}, {f: 130.81, d: 0.2}, {f: 130.81, d: 0.2}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.4}, {f: 196.00, d: 0.4},
+    {f: 164.81, d: 0.6}, {f: 196.00, d: 0.4}, {f: 220.00, d: 0.4}, {f: 261.63, d: 0.6},
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.4}, {f: 164.81, d: 0.4}, {f: 196.00, d: 0.6},
+    {f: 130.81, d: 0.4}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.4},
+    {f: 130.81, d: 0.4}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.4},
+    {f: 164.81, d: 0.4}, {f: 196.00, d: 0.2}, {f: 220.00, d: 0.2}, {f: 261.63, d: 0.4},
+    {f: 130.81, d: 0.4}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.4},
+    {f: 130.81, d: 0.2}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.4},
+    {f: 130.81, d: 0.2}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.4},
+    {f: 164.81, d: 0.2}, {f: 196.00, d: 0.2}, {f: 220.00, d: 0.2}, {f: 261.63, d: 0.4},
+    {f: 130.81, d: 0.2}, {f: 146.83, d: 0.2}, {f: 164.81, d: 0.2}, {f: 196.00, d: 0.6},
+
+    // --- ПРИПЕВ (64 ноты: Энергично, 260-520Гц, 'sawtooth') ---
+    {f: 261.63, d: 0.1}, {f: 329.63, d: 0.1}, {f: 392.00, d: 0.1}, {f: 523.25, d: 0.2},
+    {f: 392.00, d: 0.1}, {f: 329.63, d: 0.1}, {f: 261.63, d: 0.1}, {f: 196.00, d: 0.2},
+    {f: 293.66, d: 0.1}, {f: 349.23, d: 0.1}, {f: 440.00, d: 0.1}, {f: 587.33, d: 0.2},
+    {f: 440.00, d: 0.1}, {f: 349.23, d: 0.1}, {f: 293.66, d: 0.1}, {f: 220.00, d: 0.2},
+    {f: 261.63, d: 0.1}, {f: 329.63, d: 0.1}, {f: 392.00, d: 0.1}, {f: 523.25, d: 0.2},
+    {f: 392.00, d: 0.1}, {f: 329.63, d: 0.1}, {f: 261.63, d: 0.1}, {f: 196.00, d: 0.2},
+    {f: 293.66, d: 0.1}, {f: 349.23, d: 0.1}, {f: 440.00, d: 0.1}, {f: 587.33, d: 0.2},
+    {f: 440.00, d: 0.1}, {f: 349.23, d: 0.1}, {f: 293.66, d: 0.1}, {f: 523.25, d: 0.4},
+    {f: 261.63, d: 0.1}, {f: 329.63, d: 0.1}, {f: 392.00, d: 0.1}, {f: 523.25, d: 0.2},
+    {f: 392.00, d: 0.1}, {f: 329.63, d: 0.1}, {f: 261.63, d: 0.1}, {f: 196.00, d: 0.2},
+    {f: 293.66, d: 0.1}, {f: 349.23, d: 0.1}, {f: 440.00, d: 0.1}, {f: 587.33, d: 0.2},
+    {f: 440.00, d: 0.1}, {f: 349.23, d: 0.1}, {f: 293.66, d: 0.1}, {f: 220.00, d: 0.2},
+    {f: 261.63, d: 0.1}, {f: 329.63, d: 0.1}, {f: 392.00, d: 0.1}, {f: 523.25, d: 0.2},
+    {f: 392.00, d: 0.1}, {f: 329.63, d: 0.1}, {f: 261.63, d: 0.1}, {f: 196.00, d: 0.2},
+    {f: 293.66, d: 0.1}, {f: 349.23, d: 0.1}, {f: 440.00, d: 0.1}, {f: 587.33, d: 0.2},
+    {f: 440.00, d: 0.1}, {f: 349.23, d: 0.1}, {f: 587.33, d: 0.2}, {f: 523.25, d: 0.4}, {f: 0, d: 0.4},
+    // Вступление (20 нот)
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.6}, {f: 164.81, d: 0.6}, {f: 196.00, d: 1.2},
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.6}, {f: 164.81, d: 0.6}, {f: 196.00, d: 1.2},
+    {f: 164.81, d: 0.6}, {f: 196.00, d: 0.6}, {f: 220.00, d: 0.6}, {f: 261.63, d: 1.2},
+    {f: 130.81, d: 0.6}, {f: 146.83, d: 0.6}, {f: 164.81, d: 0.6}, {f: 196.00, d: 0.6},
+    {f: 164.81, d: 0.6}, {f: 196.00, d: 0.6}, {f: 220.00, d: 0.6}, {f: 220.00, d: 1},
+    
+    // Куплет (50 нот)
+    {f: 261.63, d: 0.4}, {f: 293.66, d: 0.5}, {f: 329.63, d: 0.3}, {f: 392.00, d: 0.3},
+    {f: 164.81, d: 0.15}, {f: 293.66, d: 0.15}, {f: 329.63, d: 0.3}, {f: 146.83, d: 0.6},
+    {f: 261.63, d: 0.6}, {f: 293.66, d: 0.3}, {f: 329.63, d: 0.2}, {f: 392.00, d: 0.4},
+    {f: 164.81, d: 0.15}, {f: 293.66, d: 0.15}, {f: 329.63, d: 0.3}, {f: 220.00, d: 0.6},
+    {f: 261.63, d: 0.4}, {f: 293.66, d: 0.5}, {f: 329.63, d: 0.3}, {f: 392.00, d: 0.3},
+    {f: 164.81, d: 0.15}, {f: 293.66, d: 0.15}, {f: 329.63, d: 0.4}, {f: 146.83, d: 0.6},
+    {f: 261.63, d: 0.6}, {f: 293.66, d: 0.3}, {f: 329.63, d: 0.2}, {f: 392.00, d: 0.4},
+    {f: 164.81, d: 0.15}, {f: 293.66, d: 0.15}, {f: 329.63, d: 0.4}, {f: 220.00, d: 0.6},
+    
+    // Припев (60 нот)
+    {f: 392.00, d: 0.4}, {f: 392.00, d: 0.15}, {f: 392.00, d: 0.15}, {f: 392.00, d: 0.15}, {f: 392.00, d: 0.6},
+    
+    {f: 392.00, d: 0.4}, {f: 440.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.6},
+    {f: 659.25, d: 0.2}, {f: 523.25, d: 0.2}, {f: 392.00, d: 0.4}, {f: 440.00, d: 0.2},
+    {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.8},
+    {f: 659.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 523.25, d: 0.2}, {f: 440.00, d: 0.2},
+    {f: 392.00, d: 0.6}, {f: 0, d: 0.2}, {f: 392.00, d: 0.3}, {f: 440.00, d: 0.3},
+// 1-30: Ритмічна основа (акценти на 2 та 4 долі)
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1},
+    {f: 0, d: 0.2}, {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
+    {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.2},
+    {f: 196.00, d: 0.1}, {f: 233.08, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.3},
+    {f: 311.13, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.2}, {f: 261.63, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 349.23, d: 0.1}, {f: 0, d: 0.1},
+
+    // 31-60: Розвиток теми (додавання синкоп)
+    {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1},
+    {f: 196.00, d: 0.2}, {f: 0, d: 0.1}, {f: 233.08, d: 0.1}, {f: 261.63, d: 0.1},
+    {f: 0, d: 0.2}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1},
+    {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
+    {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1},
+    {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1},
+    {f: 0, d: 0.2}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1},
+    {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
+
+    // 61-90: Басова лінія з акцентами
+    {f: 130.81, d: 0.2}, {f: 0, d: 0.1}, {f: 155.56, d: 0.1}, {f: 196.00, d: 0.1},
+    {f: 0, d: 0.1}, {f: 130.81, d: 0.2}, {f: 0, d: 0.1}, {f: 233.08, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 130.81, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1},
+    {f: 233.08, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 130.81, d: 0.2}, {f: 0, d: 0.1},
+
+    // 91-120: Фінальний грув
+    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 130.81, d: 0.1}, {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 523.25, d: 0.1}, {f: 392.00, d: 0.1}, {f: 311.13, d: 0.1}, {f: 261.63, d: 0.1},
+    {f: 130.81, d: 0.2}, {f: 0, d: 0.2},
+    // Основная часть: Гармонические переливы (80 нот)
+    {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4}, {f: 783.99, d: 0.2},
+    {f: 880.00, d: 0.6}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4},
+    {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.6},
+    {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.4},
+    {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.6},
+    {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.4},
+    {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4},
+    {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.6},
+    {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.4},
+    {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.6},
+    {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.4},
+    {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4},
+    {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.6},
+    {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.4},
+    {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.6},
+    {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.4},
+    {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4},
+    {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.6},
+    {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.2}, {f: 523.25, d: 0.4},
+    {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.2}, {f: 880.00, d: 0.6},
+    // Финал: Торжественное затихание (20 нот)
+    {f: 659.25, d: 0.3}, {f: 587.33, d: 0.3}, {f: 523.25, d: 0.3}, {f: 440.00, d: 0.3},
+    {f: 392.00, d: 0.3}, {f: 329.63, d: 0.3}, {f: 293.66, d: 0.3}, {f: 261.63, d: 0.3},
+    {f: 392.00, d: 0.3}, {f: 523.25, d: 0.3}, {f: 392.00, d: 0.3}, {f: 523.25, d: 0.3},
+    {f: 659.25, d: 0.3}, {f: 783.99, d: 0.3}, {f: 880.00, d: 0.3}, {f: 1046.50, d: 0.8},
+    {f: 783.99, d: 0.4}, {f: 523.25, d: 0.4}, {f: 261.63, d: 0.8}, {f: 0, d: 1.0}
+];
+
+
+        let noteIndex = 0;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            playNextNote();
+        }
+
+        function playNextNote() {
+            if (isMuted || !audioCtx || !gameActive || levelWaiting || isPaused) {
+                synthInterval = setTimeout(playNextNote, 500);
+                return;
+            }
+            let note = melody[noteIndex];
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(note.f, audioCtx.currentTime);
+            gain.gain.setValueAtTime(1.5, audioCtx.currentTime); 
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + note.d - 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + note.d);
+            noteIndex = (noteIndex + 1) % melody.length;
+            synthInterval = setTimeout(playNextNote, note.d * 1000);
+        }
+
+        function playSoundEffect(type) {
+            if(isMuted || !audioCtx || isPaused) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            if(type === 'fail') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            } else if(type === 'point') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if(type === 'heal') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.2);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+
+          fullscreenBtn.addEventListener('click', () => {
+            let elem = document.documentElement;
+
+            if (!document.fullscreenElement && 
+                !document.mozFullScreenElement && 
+                !document.webkitFullscreenElement && 
+                !document.msFullscreenElement) {
+                
+                // Вход в полноэкранный режим (все браузеры)
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) { /* Safari / iOS Chrome */
+                    elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) { /* Firefox */
+                    elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) { /* IE/Edge */
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                // Выход из полноэкранного режима (все браузеры)
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+            setTimeout(() => { resize(); }, 300);
+        });
+
+        permissionBtn.addEventListener('click', () => {
+            startOverlay.style.display = 'none';
+            let ready = resize();
+            initAudio();
+            gameActive = true;
+
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response == 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation, true);
+                        }
+                    }).catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation, true);
+            }
+            
+            if (!ready) {
+                setTimeout(restartGame, 100);
+            } else {
+                restartGame();
+            }
+        });
+
+        levelStartBtn.addEventListener('click', () => {
+            levelOverlay.style.display = 'none';
+            levelWaiting = false;
+        });
+
+        function setPauseState(paused) {
+            isPaused = paused;
+            if (isPaused) {
+                pauseBtn.innerText = "▶️ Старт";
+                pauseText.style.display = "block";
+            } else {
+                pauseBtn.innerText = "⏸️ Пауза для баночки";
+                pauseText.style.display = "none";
+            }
+        }
+
+        pauseBtn.addEventListener('click', () => {
+            if (!gameActive || levelWaiting) return; 
+            setPauseState(!isPaused);
+        });
+
+        helpBtn.addEventListener('click', () => {
+            if (!gameActive) return;
+            if (!levelWaiting) setPauseState(true);
+            helpOverlay.style.display = 'flex';
+        });
+
+        closeHelpBtn.addEventListener('click', () => {
+            helpOverlay.style.display = 'none';
+        });
+
+        function handleOrientation(event) {
+            if (event.gamma === null || event.beta === null) return;
+            if (window.orientation === 90) {
+                tiltX = event.beta; tiltY = -event.gamma;
+            } else if (window.orientation === -90) {
+                tiltX = -event.beta; tiltY = event.gamma;
+            } else {
+                tiltX = event.gamma; tiltY = event.beta;
+            }
+        }
+        
+        // ЛОГИКА СЕНСОРНОГО ДЖОЙСТИКА
+        const joyZone = document.getElementById('joy-zone');
+        const joyStick = document.getElementById('joy-stick');
+        const joyBase = document.getElementById('joy-base');
+
+        let joyActive = false;
+        let joyCenterX = 0;
+        let joyCenterY = 0;
+        const maxDist = 45; // Максимальный радиус хода стика (в пикселях)
+
+        joyZone.addEventListener('touchstart', (e) => {
+            if (!gameActive || levelWaiting || isPaused) return;
+            joyActive = true;
+            
+            // Получаем координаты центра джойстика на экране
+            const rect = joyBase.getBoundingClientRect();
+            joyCenterX = rect.left + rect.width / 2;
+            joyCenterY = rect.top + rect.height / 2;
+            
+            handleJoyMove(e.touches[0]);
+        });
+
+        joyZone.addEventListener('touchmove', (e) => {
+            if (!joyActive) return;
+            e.preventDefault(); // Предотвращаем скролл экрана при игре
+            handleJoyMove(e.touches[0]);
+        });
+
+        window.addEventListener('touchend', () => {
+            if (!joyActive) return;
+            joyActive = false;
+            
+            // Возвращаем стик в центр
+            joyStick.style.transform = `translate(0px, 0px)`;
+            
+            // Сбрасываем наклон шарика
+            tiltX = 0;
+            tiltY = 0;
+        });
+
+        function handleJoyMove(touch) {
+            // Расстояние от центра джойстика до пальца
+            let dx = touch.clientX - joyCenterX;
+            let dy = touch.clientY - joyCenterY;
+            let dist = Math.hypot(dx, dy);
+
+            // Если палец вышел за пределы, ограничиваем его по окружности
+            if (dist > maxDist) {
+                let angle = Math.atan2(dy, dx);
+                dx = Math.cos(angle) * maxDist;
+                dy = Math.sin(angle) * maxDist;
+                dist = maxDist;
+            }
+
+            // Визуально сдвигаем внутренний кружок
+            joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+
+            // Переводим сдвиг в коэффициент наклона (максимум до 15, как на стрелочках)
+            // Коэффициент 15 берем для полного соответствия клавиатуре
+            tiltX = (dx / maxDist) * 15;
+            tiltY = (dy / maxDist) * 15;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowLeft') tiltX = -15;
+            if(e.key === 'ArrowRight') tiltX = 15;
+            if(e.key === 'ArrowUp') tiltY = -15;
+            if(e.key === 'ArrowDown') tiltY = 15;
+            if(e.key === 'p' || e.key === 'P') {
+                if(helpOverlay.style.display === 'flex') return;
+                pauseBtn.click();
+            }
+        });
+        window.addEventListener('keyup', () => { tiltX = 0; tiltY = 0; });
+
+        function handleBallLoss() {
+            playSoundEffect('fail');
+            lives--;
+            if (lives <= 0) {
+                lives = 3;
+                initLevel(true);
+            } else {
+                ball.x = canvas.width / 2; ball.y = canvas.height / 2;
+                ball.vx = 0; ball.vy = 0;
+            }
+            updateHUD();
+        }
+
+        function initLevel(showOverlay = true) {
+            winScreen.style.display = 'none';
+            setPauseState(false);
+            
+            survivalTime = 30;
+            if (gameMode === 'survival') {
+                timerLabel.style.display = 'block';
+                timerDisplay.style.display = 'block';
+            } else {
+                timerLabel.style.display = 'none';
+                timerDisplay.style.display = 'none';
+            }
+
+            if(!resize()) return;
+
+            ball.x = canvas.width / 2; ball.y = canvas.height / 2;
+            ball.vx = 0; ball.vy = 0;
+            updateHUD();
+
+            if (showOverlay) {
+                levelWaiting = true;
+                levelStartBtn.innerText = `РІВЕНЬ ${currentLevel}`;
+                levelOverlay.style.display = 'flex';
+            }
+
+            let numHoles = 10 + currentLevel * 1.1; 
+            holes = [];
+            let attempts = 0;
+            while(holes.length < numHoles && attempts < 400) {
+                attempts++;
+                let r = Math.random() * (22 - 15) + 15;
+                let x = Math.random() * (canvas.width - r * 2) + r;
+                let y = Math.random() * (canvas.height - r * 2) + r;
+
+                let distToBall = Math.hypot(x - ball.x, y - ball.y);
+                if(distToBall < r + ball.radius + 65) continue; 
+
+                let overlapping = false;
+                for(let h of holes) {
+                    if(Math.hypot(x - h.x, y - h.y) < r + h.r + 15) { overlapping = true; break; }
+                }
+                if(!overlapping) holes.push({ x, y, r });
+            }
+
+            let speedMod = 0.7;
+            if (currentLevel <= 5) {
+                speedMod = 0.7 + (currentLevel * 0.11);
+            } else if (currentLevel >= 6 && currentLevel <= 10) {
+                let virtualLevel = 2 + (currentLevel - 6); 
+                speedMod = 0.7 + (virtualLevel * 0.11);
+            } else {
+                let virtualLevel = 7 + (currentLevel - 11); 
+                speedMod = 0.7 + (virtualLevel * 0.11);
+            }
+
+            checkpoints = [
+                { x: 40, y: 40, vx: 0.8 * speedMod, vy: 0.6 * speedMod, type: 'circle', color: '#00ff66', angle: 0, size: 15 },
+                { x: canvas.width - 40, y: 40, vx: -0.6 * speedMod, vy: 0.9 * speedMod, type: 'square', color: '#00bfff', angle: 0, size: 14 },
+                { x: 40, y: canvas.height - 40, vx: 0.7 * speedMod, vy: -0.7 * speedMod, type: 'triangle', color: '#ffea00', angle: 0, size: 15 },
+                { x: canvas.width - 40, y: canvas.height - 40, vx: -0.8 * speedMod, vy: -0.5 * speedMod, type: 'star', color: '#ff00ea', angle: 0, size: 17 }
+            ];
+
+            badCheckpoints = [];
+            let numBadCheckpoints = (currentLevel >= 11) ? 3 : (currentLevel >= 6) ? 2 : (currentLevel >= 2) ? 1 : 0;
+            for(let b = 0; b < numBadCheckpoints; b++) {
+                badCheckpoints.push({
+                    x: Math.random() > 0.5 ? 30 : canvas.width - 30, y: Math.random() * (canvas.height - 60) + 30,
+                    vx: (Math.random() > 0.5 ? 1 : -1) * speedMod, vy: (Math.random() > 0.5 ? 1 : -1) * speedMod,
+                    type: 'killer', color: '#ff003c', angle: 0, size: 12, 
+                   detectionRadius: (currentLevel >= 6) ? 120 : 0, 
+        isChasing: false,
+        // --- НОВЫЙ ПАРАМЕТР ---
+        isHunter: (b === 0) // Первый киллер (индекс 0) становится постоянным охотником
+                });
+            }
+
+            healCheckpoints = [];
+            let numHeals = (currentLevel >= 11) ? 2 : (currentLevel >= 6) ? 1 : 0;
+            for(let h = 0; h < numHeals; h++) {
+                healCheckpoints.push({
+                    x: Math.random() * (canvas.width - 60) + 30, y: Math.random() * (canvas.height - 60) + 30,
+                    vx: (Math.random() > 0.5 ? 0.5 : -0.5) * speedMod, vy: (Math.random() > 0.5 ? 0.5 : -0.5) * speedMod,
+                    type: 'heal', color: '#ff0055', angle: 0, size: 24
+                });
+            }
+
+            obstacles = [];
+            if(currentLevel >= 11) {
+                let count = 1; 
+                for(let i=0; i<count; i++) {
+                    obstacles.push({
+                        x: canvas.width * (0.2 + Math.random() * 0.6),
+                        y: canvas.height * (0.2 + Math.random() * 0.6),
+                        r: 25, color: '#6e00ff', pulse: 2
+                    });
+                }
+            }
+        }
+
+        function updateHUD() {
+            hudLives.innerText = '❤️'.repeat(lives);
+            levelSelect.value = currentLevel;
+        }
+
+        function restartGame() {
+            lives = 3; currentLevel = 1; gameActive = true; initLevel(true);
+        }
+
+        levelSelect.addEventListener('change', (e) => {
+            currentLevel = parseInt(e.target.value); lives = 3; initLevel(true);
+        });
+
+        modeSelect.addEventListener('change', (e) => {
+            gameMode = e.target.value; lives = 3; if(gameMode === 'survival') currentLevel = 1; initLevel(true);
+        });
+
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted; muteBtn.innerText = isMuted ? "🎵 Звучое: Викл" : "🎵 Звучок: Вкл";
+        });
+
+        function drawHeart(ctx, x, y, size, color, blur) {
+            ctx.save(); ctx.translate(x, y); ctx.fillStyle = color;
+            ctx.shadowBlur = blur; ctx.shadowColor = color;
+            ctx.beginPath(); let topCurveHeight = size * 0.3;
+            ctx.moveTo(0, topCurveHeight);
+            ctx.bezierCurveTo(-size / 2, topCurveHeight - size / 2, -size, topCurveHeight + size / 3, 0, size);
+            ctx.bezierCurveTo(size, topCurveHeight + size / 3, size / 2, topCurveHeight - size / 2, 0, topCurveHeight);
+            ctx.closePath(); ctx.fill(); ctx.restore();
+        }
+
+        function drawShape(ctx, type, x, y, size, angle, color) {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+            ctx.fillStyle = color; ctx.strokeStyle = color; ctx.shadowBlur = 10; ctx.shadowColor = color;
+            ctx.beginPath();
+            if (type === 'circle') ctx.arc(0, 0, size, 0, Math.PI * 2);
+            else if (type === 'square') ctx.rect(-size, -size, size * 2, size * 2);
+            else if (type === 'triangle') { ctx.moveTo(0, -size); ctx.lineTo(size, size); ctx.lineTo(-size, size); ctx.closePath(); }
+            else if (type === 'star') {
+                for (let i = 0; i < 5; i++) {
+                    ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * size, -Math.sin((18 + i * 72) * Math.PI / 180) * size);
+                    ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (size/2), -Math.sin((54 + i * 72) * Math.PI / 180) * (size/2));
+                }
+                ctx.closePath();
+            } else if (type === 'killer') {
+                ctx.lineWidth = 4; ctx.moveTo(-size, -size); ctx.lineTo(size, size); ctx.moveTo(size, -size); ctx.lineTo(-size, size); ctx.stroke(); ctx.restore(); return;
+            }
+            ctx.fill(); ctx.restore();
+        }
+
+        function processMovement(cp) {
+            if (!levelWaiting && !isPaused) {
+                cp.x += cp.vx; cp.y += cp.vy;
+                if (cp.x < cp.size || cp.x > canvas.width - cp.size) cp.vx *= -1;
+                if (cp.y < cp.size || cp.y > canvas.height - cp.size) cp.vy *= -1;
+            }
+            cp.angle += 0.015;
+        }
+
+        function update(time) {
+            if (!gameActive) { requestAnimationFrame(update); return; }
+            if (!isPaused) pulseTime += 0.07;
+
+            if (!levelWaiting && !isPaused && gameMode === 'survival') {
+                survivalTime -= 1/60;
+                timerDisplay.innerText = Math.ceil(survivalTime) + 's';
+                if (survivalTime <= 0) {
+                    survivalTime = 30;
+                    handleBallLoss();
+                }
+            }
+
+            if (!levelWaiting && !isPaused) {
+                ball.vx += tiltX * 0.04; ball.vy += tiltY * 0.04;
+                ball.vx *= 0.97; ball.vy *= 0.97;
+                ball.x += ball.vx; ball.y += ball.vy;
+
+                if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx = 0; }
+                if (ball.x > canvas.width - ball.radius) { ball.x = canvas.width - ball.radius; ball.vx = 0; }
+                if (ball.y < ball.radius) { ball.y = ball.radius; ball.vy = 0; }
+                if (ball.y > canvas.height - ball.radius) { ball.y = canvas.height - ball.radius; ball.vy = 0; }
+            }
+
+            for(let obs of obstacles) {
+                if (!levelWaiting && !isPaused) {
+            let dist = Math.hypot(ball.x - obs.x, ball.y - obs.y);
+            if(dist < ball.radius + obs.r) {
+                let angle = Math.atan2(ball.y - obs.y, ball.x - obs.x);
+                ball.x = obs.x + (ball.radius + obs.r) * Math.cos(angle);
+                ball.y = obs.y + (ball.radius + obs.r) * Math.sin(angle);
+                ball.vx *= -0.6; ball.vy *= -0.6; 
+            }
+        }
+        obs.pulse += 0.02;
+    }
+
+    for (let hole of holes) {
+        if (!levelWaiting && !isPaused && Math.hypot(ball.x - hole.x, ball.y - hole.y) < hole.r - 2) {
+            handleBallLoss(); break;
+        }
+    }
+
+    for (let cp of checkpoints) {
+        processMovement(cp);
+        if (!levelWaiting && !isPaused && Math.hypot(ball.x - cp.x, ball.y - cp.y) < ball.radius + cp.size) {
+            playSoundEffect('point'); checkpoints = checkpoints.filter(item => item !== cp); break;
+        }
+    }
+
+    // --- ЛОГИКА КИЛЛЕРОВ ---
+            for (let i = 0; i < badCheckpoints.length; i++) {
+                let bcp = badCheckpoints[i];
+                if (!levelWaiting && !isPaused) {
+        let dist = Math.hypot(ball.x - bcp.x, ball.y - bcp.y);
+
+        // 1. Проверка столкновения (для всех)
+        if (dist < ball.radius + bcp.size) {
+            handleBallLoss();
+            break;
+        }
+
+        // 2. Логика движения
+        // Охотник гоняется ВСЕГДА, остальные — по правилам (Виживатор или Пассив)
+        if (bcp.isHunter || (gameMode === 'survival' && bcp.detectionRadius > 0 && dist < bcp.detectionRadius)) {
+            bcp.isChasing = true;
+            let angle = Math.atan2(ball.y - bcp.y, ball.x - bcp.x);
+// Скорость атаки пассивного киллера
+let baseSpeed = 1.1 + (currentLevel * 0.03); 
+let chaseSpeed = bcp.isHunter ? (baseSpeed * 0.9) : baseSpeed;
+ // Охотник чуть быстрее
+            bcp.vx = Math.cos(angle) * chaseSpeed;
+            bcp.vy = Math.sin(angle) * chaseSpeed;
+        } else {
+            if (bcp.isChasing) {
+                bcp.vx = (Math.random() - 0.5) * 2;
+                bcp.vy = (Math.random() - 0.5) * 2;
+                bcp.isChasing = false;
+            }
+            if (bcp.x < bcp.size || bcp.x > canvas.width - bcp.size) bcp.vx *= -1;
+            if (bcp.y < bcp.size || bcp.y > canvas.height - bcp.size) bcp.vy *= -1;
+        }
+        bcp.x += bcp.vx;
+        bcp.y += bcp.vy;
+    }
+}
+ // Конец цикла badCheckpoints
+
+    // --- ЛОГИКА ЛЕЧЕБНЫХ ЧЕКПОИНТОВ ---
+    for (let hcp of healCheckpoints) {
+        processMovement(hcp);
+        if (!levelWaiting && !isPaused && Math.hypot(ball.x - hcp.x, ball.y - hcp.y) < ball.radius + hcp.size) {
+            let maxLives = (gameMode === 'survival') ? 7 : 4;
+            if (lives < maxLives) {
+                lives++; playSoundEffect('heal');
+            } else {
+                playSoundEffect('point');
+            }
+            healCheckpoints = healCheckpoints.filter(item => item !== hcp);
+            updateHUD(); break;
+        }
+    }
+
+    if (checkpoints.length === 0 && !levelWaiting && !isPaused) {
+        if (currentLevel < maxLevels) {
+            currentLevel++; initLevel(true); 
+        } else {
+            gameActive = false; winScreen.style.display = 'block';
+        }
+    }
+
+    ctx.fillStyle = '#627367'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#3f4a42'; ctx.lineWidth = 1;
+    for(let x=0; x<canvas.width; x+=40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    for(let y=0; y<canvas.height; y+=40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+    for (let hole of holes) {
+        ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI * 2);
+        ctx.fillStyle = '#1c1107'; ctx.fill();
+        ctx.strokeStyle = 'rgba(24, 56, 107, 0.9)'; ctx.lineWidth = 3; ctx.stroke();
+    }
+
+    for (let obs of obstacles) {
+        let dynamicR = obs.r + Math.sin(obs.pulse) * 1.5;
+        ctx.beginPath(); ctx.arc(obs.x, obs.y, dynamicR, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(142, 68, 173, 0.9)'; ctx.fill();
+        ctx.strokeStyle = obs.color; ctx.lineWidth = 3;
+        ctx.shadowBlur = 10; ctx.shadowColor = obs.color; ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    for (let cp of checkpoints) { drawShape(ctx, cp.type, cp.x, cp.y, cp.size, cp.angle, cp.color); }
+    for (let bcp of badCheckpoints) { drawShape(ctx, bcp.type, bcp.x, bcp.y, bcp.size, bcp.angle, bcp.color); }
+    
+    for (let hcp of healCheckpoints) {
+        let pulseSize = hcp.size + Math.sin(pulseTime) * 2.5; 
+        drawHeart(ctx, hcp.x, hcp.y, pulseSize, hcp.color, 15);
+    }
+
+    ctx.save(); ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball.color; ctx.shadowBlur = 15; ctx.shadowColor = '#ffffff';
+    ctx.fill(); ctx.restore();
+
+    requestAnimationFrame(update);
+}
+
+
+        populateLevelSelect();
+        resize();
+        window.addEventListener('resize', () => { resize(); });
+        window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+        requestAnimationFrame(update);
+    </script>
+</body>
+</html>
