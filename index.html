@@ -16,41 +16,7 @@
             user-select: none;
             -webkit-user-select: none;
         }
-         //СТИЛИ ДЛЯ ВИРТУАЛЬНОГО ДЖОЙСТИКА 
-        #joy-zone {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 120px;
-            height: 120px;
-            z-index: 99; /* Поверх канваса, но под оверлеями */
-            touch-action: none; /* Блокируем стандартные жесты браузера */
-        }
 
-        #joy-base {
-            width: 100%;
-            height: 100%;
-            background: rgba(25, 27, 44, 0.4);
-            border: 3px solid #00ffcc; /* Бирюзовый неон */
-            border-radius: 50%;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #joy-stick {
-            width: 50px;
-            height: 50px;
-            background: #ff00aa; /* Наш фирменный розовый ff00aa */
-            border-radius: 50%;
-            box-shadow: 0 0 15px rgba(255, 0, 170, 0.6);
-            position: absolute;
-            transition: transform 0.05s linear; /* Плавный возврат в центр */
-            pointer-events: none; /* Чтобы тачи обрабатывала подложка */
-        }
-        
         #game-layout {
             display: grid;
             grid-template-columns: 190px 1fr;
@@ -338,13 +304,7 @@
         </div>
 
         <div id="canvas-container">
-<canvas id="gameCanvas"></canvas>
-
-            <div id="joy-zone">
-                <div id="joy-base">
-                    <div id="joy-stick"></div>
-                </div>
-            </div>
+            
             <div id="start-overlay">
                 <button id="permission-btn">ЗРОБИ БАНОЧКУ І НАТИСНИ ТУТ</button>
             </div>
@@ -531,45 +491,7 @@
     {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.8},
     {f: 659.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 523.25, d: 0.2}, {f: 440.00, d: 0.2},
     {f: 392.00, d: 0.6}, {f: 0, d: 0.2}, {f: 392.00, d: 0.3}, {f: 440.00, d: 0.3},
-// 1-30: Ритмічна основа (акценти на 2 та 4 долі)
-    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
-    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1},
-    {f: 0, d: 0.2}, {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
-    {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.2},
-    {f: 196.00, d: 0.1}, {f: 233.08, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.3},
-    {f: 311.13, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.2}, {f: 261.63, d: 0.1},
-    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 349.23, d: 0.1}, {f: 0, d: 0.1},
 
-    // 31-60: Розвиток теми (додавання синкоп)
-    {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1},
-    {f: 196.00, d: 0.2}, {f: 0, d: 0.1}, {f: 233.08, d: 0.1}, {f: 261.63, d: 0.1},
-    {f: 0, d: 0.2}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1},
-    {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
-    {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1},
-    {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1},
-    {f: 0, d: 0.2}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1},
-    {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
-
-    // 61-90: Басова лінія з акцентами
-    {f: 130.81, d: 0.2}, {f: 0, d: 0.1}, {f: 155.56, d: 0.1}, {f: 196.00, d: 0.1},
-    {f: 0, d: 0.1}, {f: 130.81, d: 0.2}, {f: 0, d: 0.1}, {f: 233.08, d: 0.1},
-    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 130.81, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
-    {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1},
-    {f: 233.08, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 130.81, d: 0.2}, {f: 0, d: 0.1},
-
-    // 91-120: Фінальний грув
-    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
-    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 130.81, d: 0.1}, {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
-    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
-    {f: 523.25, d: 0.1}, {f: 392.00, d: 0.1}, {f: 311.13, d: 0.1}, {f: 261.63, d: 0.1},
-    {f: 130.81, d: 0.2}, {f: 0, d: 0.2},
     // Основная часть: Гармонические переливы (80 нот)
     {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4}, {f: 783.99, d: 0.2},
     {f: 880.00, d: 0.6}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4},
@@ -742,69 +664,6 @@
             } else {
                 tiltX = event.gamma; tiltY = event.beta;
             }
-        }
-        
-        // ЛОГИКА СЕНСОРНОГО ДЖОЙСТИКА
-        const joyZone = document.getElementById('joy-zone');
-        const joyStick = document.getElementById('joy-stick');
-        const joyBase = document.getElementById('joy-base');
-
-        let joyActive = false;
-        let joyCenterX = 0;
-        let joyCenterY = 0;
-        const maxDist = 45; // Максимальный радиус хода стика (в пикселях)
-
-        joyZone.addEventListener('touchstart', (e) => {
-            if (!gameActive || levelWaiting || isPaused) return;
-            joyActive = true;
-            
-            // Получаем координаты центра джойстика на экране
-            const rect = joyBase.getBoundingClientRect();
-            joyCenterX = rect.left + rect.width / 2;
-            joyCenterY = rect.top + rect.height / 2;
-            
-            handleJoyMove(e.touches[0]);
-        });
-
-        joyZone.addEventListener('touchmove', (e) => {
-            if (!joyActive) return;
-            e.preventDefault(); // Предотвращаем скролл экрана при игре
-            handleJoyMove(e.touches[0]);
-        });
-
-        window.addEventListener('touchend', () => {
-            if (!joyActive) return;
-            joyActive = false;
-            
-            // Возвращаем стик в центр
-            joyStick.style.transform = `translate(0px, 0px)`;
-            
-            // Сбрасываем наклон шарика
-            tiltX = 0;
-            tiltY = 0;
-        });
-
-        function handleJoyMove(touch) {
-            // Расстояние от центра джойстика до пальца
-            let dx = touch.clientX - joyCenterX;
-            let dy = touch.clientY - joyCenterY;
-            let dist = Math.hypot(dx, dy);
-
-            // Если палец вышел за пределы, ограничиваем его по окружности
-            if (dist > maxDist) {
-                let angle = Math.atan2(dy, dx);
-                dx = Math.cos(angle) * maxDist;
-                dy = Math.sin(angle) * maxDist;
-                dist = maxDist;
-            }
-
-            // Визуально сдвигаем внутренний кружок
-            joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-
-            // Переводим сдвиг в коэффициент наклона (максимум до 15, как на стрелочках)
-            // Коэффициент 15 берем для полного соответствия клавиатуре
-            tiltX = (dx / maxDist) * 15;
-            tiltY = (dy / maxDist) * 15;
         }
 
         window.addEventListener('keydown', (e) => {
