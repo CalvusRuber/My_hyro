@@ -16,7 +16,41 @@
             user-select: none;
             -webkit-user-select: none;
         }
+         //СТИЛИ ДЛЯ ВИРТУАЛЬНОГО ДЖОЙСТИКА 
+        #joy-zone {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
+            z-index: 99; /* Поверх канваса, но под оверлеями */
+            touch-action: none; /* Блокируем стандартные жесты браузера */
+        }
 
+        #joy-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(25, 27, 44, 0.4);
+            border: 3px solid #00ffcc; /* Бирюзовый неон */
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #joy-stick {
+            width: 50px;
+            height: 50px;
+            background: #ff00aa; /* Наш фирменный розовый ff00aa */
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 0, 170, 0.6);
+            position: absolute;
+            transition: transform 0.05s linear; /* Плавный возврат в центр */
+            pointer-events: none; /* Чтобы тачи обрабатывала подложка */
+        }
+        
         #game-layout {
             display: grid;
             grid-template-columns: 190px 1fr;
@@ -304,7 +338,13 @@
         </div>
 
         <div id="canvas-container">
-            
+<canvas id="gameCanvas"></canvas>
+
+            <div id="joy-zone">
+                <div id="joy-base">
+                  
+                </div>
+            </div>
             <div id="start-overlay">
                 <button id="permission-btn">ЗРОБИ БАНОЧКУ І НАТИСНИ ТУТ</button>
             </div>
@@ -319,7 +359,7 @@
                     
                     <div class="help-section">
                         <h4>🎮 Керування пристроєм:</h4>
-                        • **На смартфонах: Нахиляєш- котишся! (працює гіроскоп). Увага: Chrome вимагає лише **HTTPS** з'єднання!<br>
+                        • **На смартфонах: Нахиляєш- котишся! (працює гіроскоп).<br>
                         • **На компі: Керуй *Стрілочками* на клавіатурі.
                     </div>
 
@@ -356,7 +396,7 @@
             <div id="pause-text">GAME PAUSED</div>
 
             <div id="win-screen">
-                <div class="flash-text">НУ НІХЄРА СОБІ!,<br>БРО, ТИ КРАСАВЧІК!!</div>
+                <div class="flash-text">КОНГРЕТУЛЕЙШНС!,<br>БРО, ТИ КРАСАВЧІК!!</div>
                 <button onclick="restartGame()" style="margin-top:20px; width: auto; padding: 10px 30px;">Зробити баночку і пограти ще:)</button>
             </div>
 
@@ -366,6 +406,9 @@
     </div>
 
     <script>
+        const VIRTUAL_WIDTH = 600;
+        const VIRTUAL_HEIGHT = 360;
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const hudLives = document.getElementById('hud-lives');
@@ -417,16 +460,26 @@
             }
         }
 
-        function resize() {
-            const container = document.getElementById('canvas-container');
-            if (!container) return false;
-            let w = container.clientWidth;
-            let h = container.clientHeight;
-            if (w === 0 || h === 0) return false;
-            canvas.width = w;
-            canvas.height = h;
-            return true;
-        }
+       function resize() {
+    const container = document.getElementById('canvas-container');
+    const windowRatio = container.clientWidth / container.clientHeight;
+    const gameRatio = VIRTUAL_WIDTH / VIRTUAL_HEIGHT;
+
+    let scale;
+    if (windowRatio > gameRatio) {
+        scale = container.clientHeight / VIRTUAL_HEIGHT;
+    } else {
+        scale = container.clientWidth / VIRTUAL_WIDTH;
+    }
+
+    canvas.style.width = (VIRTUAL_WIDTH * scale) + 'px';
+    canvas.style.height = (VIRTUAL_HEIGHT * scale) + 'px';
+    
+    // Устанавливаем внутреннее разрешение холста один раз
+    canvas.width = VIRTUAL_WIDTH;
+    canvas.height = VIRTUAL_HEIGHT;
+}
+
 
         let audioCtx = null;
         let synthInterval = null;
@@ -491,7 +544,45 @@
     {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.2}, {f: 783.99, d: 0.8},
     {f: 659.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 523.25, d: 0.2}, {f: 440.00, d: 0.2},
     {f: 392.00, d: 0.6}, {f: 0, d: 0.2}, {f: 392.00, d: 0.3}, {f: 440.00, d: 0.3},
+// 1-30: Ритмічна основа (акценти на 2 та 4 долі)
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1},
+    {f: 0, d: 0.2}, {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
+    {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.2},
+    {f: 196.00, d: 0.1}, {f: 233.08, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.3},
+    {f: 311.13, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.2}, {f: 261.63, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 349.23, d: 0.1}, {f: 0, d: 0.1},
 
+    // 31-60: Розвиток теми (додавання синкоп)
+    {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1},
+    {f: 196.00, d: 0.2}, {f: 0, d: 0.1}, {f: 233.08, d: 0.1}, {f: 261.63, d: 0.1},
+    {f: 0, d: 0.2}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1},
+    {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
+    {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1},
+    {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1},
+    {f: 0, d: 0.2}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1},
+    {f: 0, d: 0.1}, {f: 349.23, d: 0.1},
+
+    // 61-90: Басова лінія з акцентами
+    {f: 130.81, d: 0.2}, {f: 0, d: 0.1}, {f: 155.56, d: 0.1}, {f: 196.00, d: 0.1},
+    {f: 0, d: 0.1}, {f: 130.81, d: 0.2}, {f: 0, d: 0.1}, {f: 233.08, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 130.81, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 311.13, d: 0.1}, {f: 0, d: 0.1}, {f: 261.63, d: 0.1}, {f: 0, d: 0.1},
+    {f: 233.08, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 130.81, d: 0.2}, {f: 0, d: 0.1},
+
+    // 91-120: Фінальний грув
+    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 349.23, d: 0.1}, {f: 0, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 0, d: 0.1}, {f: 196.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 130.81, d: 0.1}, {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 0, d: 0.1},
+    {f: 261.63, d: 0.1}, {f: 311.13, d: 0.1}, {f: 392.00, d: 0.1}, {f: 0, d: 0.1},
+    {f: 523.25, d: 0.1}, {f: 392.00, d: 0.1}, {f: 311.13, d: 0.1}, {f: 261.63, d: 0.1},
+    {f: 130.81, d: 0.2}, {f: 0, d: 0.2},
     // Основная часть: Гармонические переливы (80 нот)
     {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4}, {f: 783.99, d: 0.2},
     {f: 880.00, d: 0.6}, {f: 523.25, d: 0.2}, {f: 587.33, d: 0.2}, {f: 659.25, d: 0.4},
@@ -685,7 +776,8 @@
                 lives = 3;
                 initLevel(true);
             } else {
-                ball.x = canvas.width / 2; ball.y = canvas.height / 2;
+                ball.x = VIRTUAL_WIDTH / 2;
+                ball.y = VIRTUAL_HEIGHT / 2;
                 ball.vx = 0; ball.vy = 0;
             }
             updateHUD();
@@ -704,11 +796,12 @@
                 timerDisplay.style.display = 'none';
             }
 
-            if(!resize()) return;
+          
 
-            ball.x = canvas.width / 2; ball.y = canvas.height / 2;
+            ball.x = VIRTUAL_WIDTH / 2; ball.y = VIRTUAL_HEIGHT / 2;
             ball.vx = 0; ball.vy = 0;
             updateHUD();
+            resize()
 
             if (showOverlay) {
                 levelWaiting = true;
@@ -722,8 +815,8 @@
             while(holes.length < numHoles && attempts < 400) {
                 attempts++;
                 let r = Math.random() * (22 - 15) + 15;
-                let x = Math.random() * (canvas.width - r * 2) + r;
-                let y = Math.random() * (canvas.height - r * 2) + r;
+                let x = Math.random() * (VIRTUAL_WIDTH - r * 2) + r;
+                let y = Math.random() * (VIRTUAL_HEIGHT - r * 2) + r;
 
                 let distToBall = Math.hypot(x - ball.x, y - ball.y);
                 if(distToBall < r + ball.radius + 65) continue; 
@@ -748,16 +841,16 @@
 
             checkpoints = [
                 { x: 40, y: 40, vx: 0.8 * speedMod, vy: 0.6 * speedMod, type: 'circle', color: '#00ff66', angle: 0, size: 15 },
-                { x: canvas.width - 40, y: 40, vx: -0.6 * speedMod, vy: 0.9 * speedMod, type: 'square', color: '#00bfff', angle: 0, size: 14 },
-                { x: 40, y: canvas.height - 40, vx: 0.7 * speedMod, vy: -0.7 * speedMod, type: 'triangle', color: '#ffea00', angle: 0, size: 15 },
-                { x: canvas.width - 40, y: canvas.height - 40, vx: -0.8 * speedMod, vy: -0.5 * speedMod, type: 'star', color: '#ff00ea', angle: 0, size: 17 }
+                { x: VIRTUAL_WIDTH - 40, y: 40, vx: -0.6 * speedMod, vy: 0.9 * speedMod, type: 'square', color: '#00bfff', angle: 0, size: 14 },
+                { x: 40, y: VIRTUAL_HEIGHT - 40, vx: 0.7 * speedMod, vy: -0.7 * speedMod, type: 'triangle', color: '#ffea00', angle: 0, size: 15 },
+                { x: VIRTUAL_WIDTH - 40, y: VIRTUAL_HEIGHT - 40, vx: -0.8 * speedMod, vy: -0.5 * speedMod, type: 'star', color: '#ff00ea', angle: 0, size: 17 }
             ];
 
             badCheckpoints = [];
             let numBadCheckpoints = (currentLevel >= 11) ? 3 : (currentLevel >= 6) ? 2 : (currentLevel >= 2) ? 1 : 0;
             for(let b = 0; b < numBadCheckpoints; b++) {
                 badCheckpoints.push({
-                    x: Math.random() > 0.5 ? 30 : canvas.width - 30, y: Math.random() * (canvas.height - 60) + 30,
+                    x: Math.random() > 0.5 ? 30 : VIRTUAL_WIDTH - 30, y: Math.random() * (VIRTUAL_HEIGHT - 60) + 30,
                     vx: (Math.random() > 0.5 ? 1 : -1) * speedMod, vy: (Math.random() > 0.5 ? 1 : -1) * speedMod,
                     type: 'killer', color: '#ff003c', angle: 0, size: 12, 
                    detectionRadius: (currentLevel >= 6) ? 120 : 0, 
@@ -771,7 +864,7 @@
             let numHeals = (currentLevel >= 11) ? 2 : (currentLevel >= 6) ? 1 : 0;
             for(let h = 0; h < numHeals; h++) {
                 healCheckpoints.push({
-                    x: Math.random() * (canvas.width - 60) + 30, y: Math.random() * (canvas.height - 60) + 30,
+                    x: Math.random() * (VIRTUAL_WIDTH - 60) + 30, y: Math.random() * (VIRTUAL_HEIGHT - 60) + 30,
                     vx: (Math.random() > 0.5 ? 0.5 : -0.5) * speedMod, vy: (Math.random() > 0.5 ? 0.5 : -0.5) * speedMod,
                     type: 'heal', color: '#ff0055', angle: 0, size: 24
                 });
@@ -782,8 +875,8 @@
                 let count = 1; 
                 for(let i=0; i<count; i++) {
                     obstacles.push({
-                        x: canvas.width * (0.2 + Math.random() * 0.6),
-                        y: canvas.height * (0.2 + Math.random() * 0.6),
+                        x: VIRTUAL_WIDTH * (0.2 + Math.random() * 0.6),
+                        y: VIRTUAL_HEIGHT * (0.2 + Math.random() * 0.6),
                         r: 25, color: '#6e00ff', pulse: 2
                     });
                 }
@@ -843,8 +936,9 @@
         function processMovement(cp) {
             if (!levelWaiting && !isPaused) {
                 cp.x += cp.vx; cp.y += cp.vy;
-                if (cp.x < cp.size || cp.x > canvas.width - cp.size) cp.vx *= -1;
-                if (cp.y < cp.size || cp.y > canvas.height - cp.size) cp.vy *= -1;
+                 VIRTUAL_WIDTH / VIRTUAL_HEIGHT
+                if (cp.x < cp.size || cp.x > VIRTUAL_WIDTH - cp.size) cp.vx *= -1;
+                if (cp.y < cp.size || cp.y > VIRTUAL_HEIGHT - cp.size) cp.vy *= -1;
             }
             cp.angle += 0.015;
         }
@@ -868,9 +962,9 @@
                 ball.x += ball.vx; ball.y += ball.vy;
 
                 if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx = 0; }
-                if (ball.x > canvas.width - ball.radius) { ball.x = canvas.width - ball.radius; ball.vx = 0; }
+                if (ball.x > VIRTUAL_WIDTH - ball.radius) { ball.x = VIRTUAL_WIDTH - ball.radius; ball.vx = 0; }
                 if (ball.y < ball.radius) { ball.y = ball.radius; ball.vy = 0; }
-                if (ball.y > canvas.height - ball.radius) { ball.y = canvas.height - ball.radius; ball.vy = 0; }
+                if (ball.y > VIRTUAL_HEIGHT - ball.radius) { ball.y = VIRTUAL_HEIGHT - ball.radius; ball.vy = 0; }
             }
 
             for(let obs of obstacles) {
@@ -928,8 +1022,8 @@ let chaseSpeed = bcp.isHunter ? (baseSpeed * 0.9) : baseSpeed;
                 bcp.vy = (Math.random() - 0.5) * 2;
                 bcp.isChasing = false;
             }
-            if (bcp.x < bcp.size || bcp.x > canvas.width - bcp.size) bcp.vx *= -1;
-            if (bcp.y < bcp.size || bcp.y > canvas.height - bcp.size) bcp.vy *= -1;
+            if (bcp.x < bcp.size || bcp.x > VIRTUAL_WIDTH - bcp.size) bcp.vx *= -1;
+            if (bcp.y < bcp.size || bcp.y > VIRTUAL_HEIGHT - bcp.size) bcp.vy *= -1;
         }
         bcp.x += bcp.vx;
         bcp.y += bcp.vy;
@@ -960,11 +1054,11 @@ let chaseSpeed = bcp.isHunter ? (baseSpeed * 0.9) : baseSpeed;
         }
     }
 
-    ctx.fillStyle = '#627367'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#627367'; ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
     ctx.strokeStyle = '#3f4a42'; ctx.lineWidth = 1;
-    for(let x=0; x<canvas.width; x+=40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-    for(let y=0; y<canvas.height; y+=40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+    for(let x=0; x<VIRTUAL_WIDTH; x+=40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, VIRTUAL_HEIGHT); ctx.stroke(); }
+    for(let y=0; y<VIRTUAL_HEIGHT; y+=40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(VIRTUAL_WIDTH, y); ctx.stroke(); }
 
     for (let hole of holes) {
         ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI * 2);
