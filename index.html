@@ -417,6 +417,11 @@
         let tiltX = 0;
         let tiltY = 0;
         let pulseTime = 0; 
+        
+        let mouseX = 0;
+        let mouseY = 0;
+        let isMouseDown = false;
+
 
         function populateLevelSelect() {
             levelSelect.innerHTML = '';
@@ -734,6 +739,18 @@
                 pauseBtn.click();
             }
         });
+        
+        canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    // Перерахунок координат миші відносно розмірів canvas
+    mouseX = (e.clientX - rect.left) * (VIRTUAL_WIDTH / rect.width);
+    mouseY = (e.clientY - rect.top) * (VIRTUAL_HEIGHT / rect.height);
+});
+
+canvas.addEventListener('mousedown', () => isMouseDown = true);
+canvas.addEventListener('mouseup', () => isMouseDown = false);
+canvas.addEventListener('mouseleave', () => isMouseDown = false);
+
         window.addEventListener('keyup', () => { tiltX = 0; tiltY = 0; });
 
         function handleBallLoss() {
@@ -948,8 +965,19 @@
                 }
             }
 
-            if (!levelWaiting && !isPaused) {
-                ball.vx += tiltX * 0.04; ball.vy += tiltY * 0.04;
+            if (!levelWaiting && !isPaused) 
+             if (isMouseDown) {
+        // Управління мишкою: кулька "тягнеться" до курсора
+        let dx = mouseX - ball.x;
+        let dy = mouseY - ball.y;
+        let dist = Math.hypot(dx, dy);
+        
+        // Чутливість 0.5 можна змінити на більшу/меншу
+        if (dist > 5) {
+            ball.vx += (dx / dist) * 0.5;
+            ball.vy += (dy / dist) * 0.5;
+        }
+    } else { ball.vx += tiltX * 0.04; ball.vy += tiltY * 0.04;
                 ball.vx *= 0.97; ball.vy *= 0.97;
                 ball.x += ball.vx; ball.y += ball.vy;
 
