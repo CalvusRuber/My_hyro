@@ -16,40 +16,7 @@
             user-select: none;
             -webkit-user-select: none;
         }
-         //СТИЛИ ДЛЯ ВИРТУАЛЬНОГО ДЖОЙСТИКА 
-        #joy-zone {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 120px;
-            height: 120px;
-            z-index: 99; /* Поверх канваса, но под оверлеями */
-            touch-action: none; /* Блокируем стандартные жесты браузера */
-        }
 
-        #joy-base {
-            width: 100%;
-            height: 100%;
-            background: rgba(25, 27, 44, 0.4);
-            border: 3px solid #00ffcc; /* Бирюзовый неон */
-            border-radius: 50%;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #joy-stick {
-            width: 50px;
-            height: 50px;
-            background: #ff00aa; /* Наш фирменный розовый ff00aa */
-            border-radius: 50%;
-            box-shadow: 0 0 15px rgba(255, 0, 170, 0.6);
-            position: absolute;
-            transition: transform 0.05s linear; /* Плавный возврат в центр */
-            pointer-events: none; /* Чтобы тачи обрабатывала подложка */
-        }
         
         #game-layout {
             display: grid;
