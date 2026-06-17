@@ -839,12 +839,37 @@
                 speedMod = 0.7 + (virtualLevel * 0.11);
             }
 
-            checkpoints = [
-                { x: 40, y: 40, vx: 0.8 * speedMod, vy: 0.6 * speedMod, type: 'circle', color: '#00ff66', angle: 0, size: 15 },
-                { x: VIRTUAL_WIDTH - 40, y: 40, vx: -0.6 * speedMod, vy: 0.9 * speedMod, type: 'square', color: '#00bfff', angle: 0, size: 14 },
-                { x: 40, y: VIRTUAL_HEIGHT - 40, vx: 0.7 * speedMod, vy: -0.7 * speedMod, type: 'triangle', color: '#ffea00', angle: 0, size: 15 },
-                { x: VIRTUAL_WIDTH - 40, y: VIRTUAL_HEIGHT - 40, vx: -0.8 * speedMod, vy: -0.5 * speedMod, type: 'star', color: '#ff00ea', angle: 0, size: 17 }
-            ];
+                        // --- ПОВНИЙ БЛОК ІНІЦІАЛІЗАЦІЇ ЧЕКПОЇНТІВ ---
+            checkpoints = [];
+            const types = ['circle', 'square', 'triangle', 'star'];
+            const colors = ['#00ff66', '#00bfff', '#ffea00', '#ff00ea'];
+            let speed = 0.8 * speedMod;
+
+            for (let i = 0; i < 4; i++) {
+                let side = Math.floor(Math.random() * 4);
+                let x, y;
+
+                // 1. Старт з країв
+                if (side === 0) { x = Math.random() * VIRTUAL_WIDTH; y = 20; }
+                else if (side === 1) { x = Math.random() * VIRTUAL_WIDTH; y = VIRTUAL_HEIGHT - 20; }
+                else if (side === 2) { x = 20; y = Math.random() * VIRTUAL_HEIGHT; }
+                else { x = VIRTUAL_WIDTH - 20; y = Math.random() * VIRTUAL_HEIGHT; }
+
+                // 2. Повний рандом напрямку (кут від 0 до 360 градусів)
+                let angle = Math.random() * Math.PI * 2;
+                
+                checkpoints.push({
+                    x: x, 
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    type: types[i],
+                    color: colors[i],
+                    angle: 0,
+                    size: 15
+                });
+            }
+
 
             badCheckpoints = [];
             let numBadCheckpoints = (currentLevel >= 11) ? 3 : (currentLevel >= 6) ? 2 : (currentLevel >= 2) ? 1 : 0;
