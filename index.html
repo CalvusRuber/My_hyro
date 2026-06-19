@@ -277,6 +277,7 @@
                     <select id="mode-select">
                         <option value="normal">🟢 Звичайний</option>
                         <option value="survival">💀 Виживатор</option>
+                        <option value="dontsave">🚫 Don't save</option>
                     </select>
                 </div>
 
@@ -629,7 +630,7 @@
                 osc.start(); osc.stop(audioCtx.currentTime + 0.2);
             }
         }
-
+ 
           fullscreenBtn.addEventListener('click', () => {
             let elem = document.documentElement;
 
@@ -754,18 +755,44 @@ canvas.addEventListener('mouseleave', () => isMouseDown = false);
         window.addEventListener('keyup', () => { tiltX = 0; tiltY = 0; });
 
         function handleBallLoss() {
-            playSoundEffect('fail');
-            lives--;
-            if (lives <= 0) {
-                lives = 3;
-                initLevel(true);
-            } else {
-                ball.x = VIRTUAL_WIDTH / 2;
-                ball.y = VIRTUAL_HEIGHT / 2;
-                ball.vx = 0; ball.vy = 0;
-            }
-            updateHUD();
+    playSoundEffect('fail');
+    lives--;
+    if (lives <= 0) {
+        if (gameMode === 'dontsave') {
+            playCrowdDisappointment(); // Звук вболівальників
+            currentLevel = 1;         // Скидання рівня
+            lives = 3;
+            initLevel(true);
+        } else {
+            lives = 3;
+            initLevel(true);
         }
+    } else {
+        ball.x = VIRTUAL_WIDTH / 2;
+        ball.y = VIRTUAL_HEIGHT / 2;
+        ball.vx = 0; ball.vy = 0;
+    }
+    updateHUD();
+}
+
+ 
+        function playCrowdDisappointment() {
+    if (isMuted || !audioCtx) return;
+    // Генеруємо "шум" розчарування (білий шум згасаючий)
+    let bufferSize = audioCtx.sampleRate * 2;
+    let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    let data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    let source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    let gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5);
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+    source.start();
+}
 
         function initLevel(showOverlay = true) {
             winScreen.style.display = 'none';
@@ -906,8 +933,20 @@ canvas.addEventListener('mouseleave', () => isMouseDown = false);
         });
 
         modeSelect.addEventListener('change', (e) => {
-            gameMode = e.target.value; lives = 3; if(gameMode === 'survival') currentLevel = 1; initLevel(true);
-        });
+    gameMode = e.target.value;
+    lives = 3;
+    currentLevel = 1; // Завжди починаємо з першого
+    
+    // Блокуємо вибір рівня, якщо вибрано "dontsave"
+    if (gameMode === 'dontsave') {
+        levelSelect.disabled = true;
+    } else {
+        levelSelect.disabled = false;
+    }
+    
+    initLevel(true);
+});
+
 
         muteBtn.addEventListener('click', () => {
             isMuted = !isMuted; muteBtn.innerText = isMuted ? "🎵 Звучое: Викл" : "🎵 Звучок: Вкл";
