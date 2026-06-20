@@ -410,6 +410,7 @@
 
         let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 14, color: '#ffffff' };
         let holes = [];
+        let homeHole = null;
         let checkpoints = [];
         let badCheckpoints = []; 
         let obstacles = []; 
@@ -828,6 +829,16 @@ canvas.addEventListener('mouseleave', () => isMouseDown = false);
                 let r = Math.random() * (22 - 15) + 15;
                 let x = Math.random() * (VIRTUAL_WIDTH - r * 2) + r;
                 let y = Math.random() * (VIRTUAL_HEIGHT - r * 2) + r;
+                
+              if (gameMode === 'survival') {
+    homeHole = {
+        x: Math.random() * (VIRTUAL_WIDTH - 60) + 30,
+        y: Math.random() * (VIRTUAL_HEIGHT - 60) + 30,
+        r: 20 // Трохи більша за звичайні
+    };
+} else {
+    homeHole = null;
+}
 
                 let distToBall = Math.hypot(x - ball.x, y - ball.y);
                 if(distToBall < r + ball.radius + 65) continue; 
@@ -1040,10 +1051,11 @@ canvas.addEventListener('mouseleave', () => isMouseDown = false);
     }
 
     for (let hole of holes) {
-        if (!levelWaiting && !isPaused && Math.hypot(ball.x - hole.x, ball.y - hole.y) < hole.r - 2) {
-            handleBallLoss(); break;
-        }
-    }
+        if (!levelWaiting && !isPaused && Math.hypot(ball.x - hole.x, ball.y - hole.y) < hole.r - 2)
+
+{handleBallLoss(); break;} 
+
+    } 
 
     for (let cp of checkpoints) {
         processMovement(cp);
@@ -1105,13 +1117,28 @@ let chaseSpeed = bcp.isHunter ? (baseSpeed * 0.9) : baseSpeed;
         }
     }
 
-    if (checkpoints.length === 0 && !levelWaiting && !isPaused) {
+    // ЗАМІНИТИ НА ЦЕ:
+if (checkpoints.length === 0) {
+    let canFinish = true;
+    // Якщо виживатор - перевіряємо, чи в лузі
+    if (gameMode === 'survival' && homeHole) {
+        let dist = Math.hypot(ball.x - homeHole.x, ball.y - homeHole.y);
+        
+        // Умова: відстань між центрами менша за радіус лузи 
+        // (це забезпечує знаходження більшої частини кульки всередині)
+        if (dist > homeHole.r) {
+            canFinish = false;
+        }
+    }
+
+    if (canFinish) {
         if (currentLevel < maxLevels) {
             currentLevel++; initLevel(true); 
         } else {
             gameActive = false; winScreen.style.display = 'block';
         }
     }
+}
 
     ctx.fillStyle = '#627367'; ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
@@ -1123,6 +1150,21 @@ let chaseSpeed = bcp.isHunter ? (baseSpeed * 0.9) : baseSpeed;
         ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI * 2);
         ctx.fillStyle = '#1c1107'; ctx.fill();
         ctx.strokeStyle = 'rgba(24, 56, 107, 0.9)'; ctx.lineWidth = 3; ctx.stroke();
+                       // ДОДАТИ ЦЕ:
+if (homeHole) {
+    ctx.beginPath();
+    ctx.arc(homeHole.x, homeHole.y, homeHole.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#1c1107'; // Наприклад, бірюзова для відмінності
+    ctx.fill();
+    ctx.strokeStyle = '#FF8C42';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#1c1107';
+    ctx.stroke();
+    // Додамо текст "HOME"
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("HOME", homeHole.x, homeHole.y + 5);}
     }
 
     for (let obs of obstacles) {
